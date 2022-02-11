@@ -120,9 +120,6 @@ def post_header_check(self):
     self.end_headers()
     self.wfile.write(bytes(json.dumps(errors),"utf-8"))
 
-
-
-
 class TestHTTPClient(unittest.TestCase):
     httpd = None
     running = False

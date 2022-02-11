@@ -101,8 +101,11 @@ class HTTPClient(object):
         except:
             return None
 
-    def get_body(self, data: bytearray, encoding = 'utf-8') -> str:                        
-        return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8' if encoding is None else encoding, 'ignore'))
+    def get_body(self, data: bytearray, encoding = 'utf-8') -> str:            
+        try:            
+            return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8' if encoding is None else encoding, 'ignore'))
+        except:
+            return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8', 'ignore'))
     
     def sendall(self, data : bytearray):
         self.socket.sendall(data.encode('utf-8'))
