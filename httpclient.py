@@ -42,8 +42,7 @@ class HTTPClient(object):
         return None    
 
     def get_url(self, url: str) -> Tuple[str, str, int]:
-        parsedUrl = urllib.parse.urlparse(url)
-        # print(parsedUrl.hostname, parsedUrl.path, parsedUrl.port)
+        parsedUrl = urllib.parse.urlparse(url)        
         return(
             parsedUrl.hostname, 
             parsedUrl.path if parsedUrl.path != '' else '/', 
@@ -84,8 +83,26 @@ class HTTPClient(object):
     def get_headers(self, data: bytearray) -> str:
         return str.strip(data[:data.index(b'\r\n\r\n')].decode('utf-8'))
 
-    def get_body(self, data: bytearray) -> str:                        
-        return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8', 'ignore'))
+    def get_header(self, headers : str, targetHeader : str) -> str :
+        try:                        
+            return {k.lower(): v for k, v in dict(x.split(': ') for x in headers.split('\r\n')[1:]).items()}[targetHeader.lower()]               
+        except:            
+            return None
+
+    def get_charset(self, headers : str) :
+        try:
+            contentType = self.get_header(headers, 'content-type')
+            if contentType is None: return None
+
+            for x in str.strip(contentType.split(';')):
+                if 'charset' in x:
+                    return str.strip(x.split('=')[1])
+            return None
+        except:
+            return None
+
+    def get_body(self, data: bytearray, encoding = 'utf-8') -> str:                        
+        return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8' if encoding is None else encoding, 'ignore'))
     
     def sendall(self, data : bytearray):
         self.socket.sendall(data.encode('utf-8'))
@@ -114,21 +131,17 @@ class HTTPClient(object):
             response = self.recvall_b(self.socket)                                           
 
             code = self.get_code(response)
-            headers = self.get_headers(response)
-            body = self.get_body(response)                    
+            headers = self.get_headers(response)                        
+            body = self.get_body(response, self.get_charset(headers))                    
 
             return HTTPResponse(code, body)
         except socket.gaierror:
             print('Could not resolve host:', host)
-            exit()
-        except:
-            return None
+            exit()        
         finally:
             self.close()
 
-    def POST(self, url, args : Dict = None) -> HTTPResponse:
-        print(args) 
-
+    def POST(self, url, args : Dict = None) -> HTTPResponse:      
         try:
             host, path, port = self.get_url(url)          
             self.connect(host, port)                                
@@ -137,13 +150,14 @@ class HTTPClient(object):
             self.sendall(request)                    
             response = self.recvall_b(self.socket)                                           
 
-            code = self.get_code(response)
-            headers = self.get_headers(response)
+            code = self.get_code(response)            
+            headers = self.get_headers(response)            
             body = self.get_body(response)                    
 
             return HTTPResponse(code, body)
-        # except:
-        #     pass
+        except socket.gaierror:
+            print('Could not resolve host:', host)
+            exit()
         finally:
             self.close()
 
