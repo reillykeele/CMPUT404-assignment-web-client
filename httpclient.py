@@ -139,8 +139,7 @@ class HTTPClient(object):
 
             return HTTPResponse(code, body)
         except socket.gaierror:
-            print('Could not resolve host:', host)
-            exit()        
+            print('Could not resolve host:', host)            
         finally:
             self.close()
 
@@ -156,22 +155,19 @@ class HTTPClient(object):
             code = self.get_code(response)            
             headers = self.get_headers(response)            
             body = self.get_body(response, self.get_charset(headers))                    
-            
+
             return HTTPResponse(code, body)
         except socket.gaierror:
-            print('Could not resolve host:', host)
-            exit()
+            print('Could not resolve host:', host)            
         finally:
             self.close()
 
     def command(self, url, command="GET", args=None):
-        if (command == "GET"):
-            
+        if (command == "GET"):            
             return self.GET(url, args).body
 
         elif (command == "POST"):
-            
-            return self.POST(url, args)        
+            return self.POST(url, args).body
 
         else:
             return "Unsupported operation."
@@ -182,8 +178,6 @@ if __name__ == "__main__":
         help()
         sys.exit(1)
     elif (len(sys.argv) == 3):
-        print(client.command( sys.argv[2], sys.argv[1] ))
-        # client.command(sys.argv[2], sys.argv[1])
+        print(client.command( sys.argv[2], sys.argv[1] ))        
     else:
-        print(client.command( sys.argv[1] ))
-        # client.command(sys.argv[1])
+        print(client.command( sys.argv[1] ))        
