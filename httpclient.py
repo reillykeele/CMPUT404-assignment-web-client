@@ -155,8 +155,8 @@ class HTTPClient(object):
 
             code = self.get_code(response)            
             headers = self.get_headers(response)            
-            body = self.get_body(response)                    
-
+            body = self.get_body(response, self.get_charset(headers))                    
+            
             return HTTPResponse(code, body)
         except socket.gaierror:
             print('Could not resolve host:', host)
