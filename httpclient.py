@@ -21,7 +21,7 @@
 import sys
 import socket
 import re
-from typing import Tuple
+from typing import Dict, Tuple
 from urllib import request
 # you may use urllib to encode data appropriately
 import urllib.parse
@@ -49,13 +49,22 @@ class HTTPClient(object):
             parsedUrl.path if parsedUrl.path != '' else '/', 
             parsedUrl.port or 80)
 
-    def get_request(self, operation : str, host : str, path : str, y) -> str:
-        request = f"{operation} {path} HTTP/1.1\r\n{self.get_request_headers(host, len(y))}\r\n\r\n"        
+    def get_request(self, operation : str, host : str, path : str, args : Dict = None) -> str:
+
+        query = None if args is None else urllib.parse.urlencode(args)            
+        content = ''
+
+        if operation == 'GET' and query != None:
+            path += '?' + query        
+        elif operation == 'POST' and query != None:
+            content = query + '\r\n\r\n'
+
+        request = f"{operation} {path} HTTP/1.1\r\n{self.get_request_headers(operation, host, query)}\r\n\r\n{content}"
 
         print (request)
         return request
 
-    def get_request_headers(self, host, contentLength = 0) -> str:
+    def get_request_headers(self, operation, host, content = None) -> str:
         requestHeaders = {               
                 'Host' : host,
                 'Connection' : 'close',
@@ -63,8 +72,9 @@ class HTTPClient(object):
                 'Accept' : '*/*'                
             }
             
-        if contentLength > 0 :
-            requestHeaders['ContentLength', str(contentLength)]
+        if operation == 'POST' :
+            requestHeaders['Content-Type'] = 'application/x-www-form-urlencoded'
+            requestHeaders['Content-Length'] = str(0) if content is None else str(len(content))
 
         return '\r\n'.join(': '.join(x) for x in requestHeaders.items())    
 
@@ -77,24 +87,14 @@ class HTTPClient(object):
     def get_body(self, data: bytearray) -> str:                        
         return str.strip(data[data.index(b'\r\n\r\n'):].decode('utf-8', 'ignore'))
     
-    def sendall(self, data):
+    def sendall(self, data : bytearray):
         self.socket.sendall(data.encode('utf-8'))
         
     def close(self):
         try:
             self.socket.close()
         except: pass            
-
-    # read everything from the socket
-    def recvall(self, sock) -> str:
-        buffer = bytearray()        
-        while True:
-            part = sock.recv(1024)                   
-            buffer += part
-            if (not part):
-                break        
-        return buffer.decode('utf-8', 'ignore')
-
+    
     # read everything from the socket
     def recvall_b(self, sock) -> bytearray:
         buffer = bytearray()        
@@ -104,12 +104,12 @@ class HTTPClient(object):
             if (not part):                
                 return buffer                    
 
-    def GET(self, url, args=None):
-        try:
-            host, path, port = self.get_url(url)          
+    def GET(self, url, args : Dict = None) -> HTTPResponse:
+        host, path, port = self.get_url(url)          
+        try:            
             self.connect(host, port)                                
 
-            request = self.get_request('GET', host, path, bytearray())            
+            request = self.get_request('GET', host, path, args)            
             self.sendall(request)                    
             response = self.recvall_b(self.socket)                                           
 
@@ -118,26 +118,28 @@ class HTTPClient(object):
             body = self.get_body(response)                    
 
             return HTTPResponse(code, body)
-        # except:
-        #     pass
+        except socket.gaierror:
+            print('Could not resolve host:', host)
+            exit()
+        except:
+            return None
         finally:
             self.close()
 
-    def POST(self, url, args=None):
+    def POST(self, url, args : Dict = None) -> HTTPResponse:
+        print(args) 
+
         try:
             host, path, port = self.get_url(url)          
             self.connect(host, port)                                
 
-            request = self.get_request('GET', host, path, bytearray())            
+            request = self.get_request('POST', host, path, args)
             self.sendall(request)                    
             response = self.recvall_b(self.socket)                                           
 
             code = self.get_code(response)
             headers = self.get_headers(response)
-            body = self.get_body(response)
-            
-            # print(headers, '\n')
-            # print(body, '\n')
+            body = self.get_body(response)                    
 
             return HTTPResponse(code, body)
         # except:
