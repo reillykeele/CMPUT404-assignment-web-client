@@ -140,6 +140,9 @@ class HTTPClient(object):
             return HTTPResponse(code, body)
         except socket.gaierror:
             print('Could not resolve host:', host)            
+            return None
+        except:
+            return None
         finally:
             self.close()
 
@@ -158,7 +161,10 @@ class HTTPClient(object):
 
             return HTTPResponse(code, body)
         except socket.gaierror:
-            print('Could not resolve host:', host)            
+            print('Could not resolve host:', host)        
+            return None    
+        except:
+            return None
         finally:
             self.close()
 
